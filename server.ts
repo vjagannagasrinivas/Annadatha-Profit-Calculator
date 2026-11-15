@@ -259,8 +259,8 @@ async function startServer() {
           id: 'SRC-GEO',
           name: 'OpenStreetMap Nominatim & Administrative Boundary Dataset',
           category: 'GEOGRAPHY_BOUNDARY',
-          status: 'LIVE_CONNECTED',
-          statusLabel: 'Live Connected (+ Verified AP/India Boundary Fallback)',
+          status: 'VERIFICATION_REQUIRED',
+          statusLabel: 'Geocoding only — parcel land use is not verified',
           details:
             'Resolves GPS/manual queries into Urban, Peri-Urban, or Rural boundaries so city centres (e.g., Vijayawada) are never treated as farmland.'
         },
@@ -295,8 +295,8 @@ async function startServer() {
           id: 'SRC-ICAR',
           name: 'ICAR & ICAR-CRIDA District Crop Contingency Plans',
           category: 'AGRONOMY_REFERENCE',
-          status: 'CURATED_REFERENCE',
-          statusLabel: 'Curated Official Reference Loaded (Krishna District)',
+          status: 'VERIFICATION_REQUIRED',
+          statusLabel: 'Official reference documents and local applicability require verification',
           details:
             'Governs flood-submergence tolerance, drainage rejection rules, and delayed-monsoon crop contingency advisories.'
         },
@@ -304,8 +304,8 @@ async function startServer() {
           id: 'SRC-ANGRAU',
           name: 'ANGRAU & ICAR-KVK Ghantasala Crop Production Protocols',
           category: 'AGRONOMY_REFERENCE',
-          status: 'CURATED_REFERENCE',
-          statusLabel: 'Curated Official Reference Loaded',
+          status: 'VERIFICATION_REQUIRED',
+          statusLabel: 'Research records and source documents require verification',
           details:
             'Calibrates varietal selections, 13-item cultivation cost structures, seed rates, and seasonal sowing windows.'
         },
