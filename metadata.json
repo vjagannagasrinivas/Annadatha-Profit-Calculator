@@ -1,0 +1,6 @@
+{
+  "name": "Annadatha — Agricultural Intelligence & Crop Profit Optimization Platform",
+  "description": "Comprehensive agricultural intelligence, farm soil and weather analytics, crop suitability comparison, resource planning, and market profit optimization platform for Indian agriculture with pilot in Gudlavalleru, Krishna District, AP.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
