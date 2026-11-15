@@ -67,6 +67,8 @@ export const CropIntelligencePage: React.FC = () => {
     pilotDistrict,
     pilotState,
     researchEvidence,
+    weather,
+    mandiPrices,
     addReviewItem,
     addToast
   } = useApp();
@@ -194,13 +196,21 @@ export const CropIntelligencePage: React.FC = () => {
       });
   }, []);
 
+  // Recommendations require a real farm parcel, a linked lab soil report,
+  // weather data, and dated market prices. Missing inputs must never be guessed.
+  const hasVerifiedFarmInputs = Boolean(
+    primaryParcel && farmerSoilCards.length > 0 && weather && mandiPrices.length > 0
+  );
+
   const rankedEvaluatedCrops = useMemo(() => {
+    if (!hasVerifiedFarmInputs) return [];
     return rankCropsForFarm(crops, effectiveFarmProfile, rankingType, researchEvidence);
-  }, [crops, effectiveFarmProfile, rankingType, researchEvidence]);
+  }, [crops, effectiveFarmProfile, rankingType, researchEvidence, hasVerifiedFarmInputs]);
 
   const cropCombinations = useMemo(() => {
+    if (!hasVerifiedFarmInputs) return [];
     return evaluateCropCombinations(crops, effectiveFarmProfile, researchEvidence);
-  }, [crops, effectiveFarmProfile, researchEvidence]);
+  }, [crops, effectiveFarmProfile, researchEvidence, hasVerifiedFarmInputs]);
 
   const displayedCrops = useMemo(() => {
     return rankedEvaluatedCrops.filter((item) => {
@@ -218,14 +228,14 @@ export const CropIntelligencePage: React.FC = () => {
   }, [location, effectiveFarmProfile, rankedEvaluatedCrops, aiSynthesisSuccess]);
 
   const isLocationBlockedForCrops =
-    location.classification === 'URBAN' || !location.agriculturalLandConfirmed;
+    location.classification === 'URBAN' || !location.agriculturalLandConfirmed || !hasVerifiedFarmInputs;
 
   const handleRunAiAgent = async () => {
     if (isLocationBlockedForCrops) {
       addToast(
         'warning',
         'Confirm Agricultural Parcel',
-        'Urban city-centre or unconfirmed GPS cannot be evaluated as farmland. Select or confirm your rural parcel in Step 1.'
+        'Crop analysis is locked until the actual agricultural parcel, lab soil report, verified weather, and dated mandi prices are available. Missing values are not guessed.'
       );
       return;
     }
