@@ -375,18 +375,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem('annadatha_bookmarked_schemes');
     localStorage.removeItem('annadatha_research_evidence');
     
-    setFarmers(INITIAL_FARMERS);
-    setParcels(INITIAL_PARCELS);
-    setSoilCards(INITIAL_SOIL_CARDS);
-    setProfitPlans(INITIAL_PROFIT_PLANS);
-    setReviewQueue(INITIAL_REVIEW_QUEUE);
-    setSchemeApplications(INITIAL_SCHEME_APPLICATIONS);
-    setBookmarkedSchemeIds(['SCHEME-PM-KISAN', 'SCHEME-AP-RYTHU-BHAROSA', 'SCHEME-FREE-CROP-INSURANCE']);
-    setResearchEvidence(INITIAL_RESEARCH_EVIDENCE);
-    setResourcePlan(INITIAL_RESOURCE_PLAN_PADDY);
-    setActiveFarmerId('AP-KRI-GUD-0182');
+    setFarmers([]);
+    setParcels([]);
+    setSoilCards([]);
+    setProfitPlans([]);
+    setReviewQueue([]);
+    setSchemeApplications([]);
+    setBookmarkedSchemeIds([]);
+    setResearchEvidence([]);
+    setResourcePlan([]);
+    setActiveFarmerId('');
     
-    addToast('warning', 'Demo Data Reset', 'All illustrative demo records restored to initial pilot state.');
+    addToast('info', 'Workspace Cleared', 'Local records cleared. No demo records were restored.');
   };
 
   const activeFarmer = farmers.find(f => f.id === activeFarmerId) || farmers[0];
