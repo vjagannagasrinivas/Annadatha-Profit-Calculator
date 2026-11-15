@@ -21,6 +21,15 @@ export const WeatherIntelligencePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Live weather is deliberately unavailable until a verified feed is connected. */}
+      {!weather ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950">
+          <h2 className="font-semibold">Live weather data unavailable</h2>
+          <p className="mt-1">Annadatha has no connected, verified IMD station feed for this location. No temperature, rainfall, forecast, or spraying advice is displayed.</p>
+          <a className="mt-2 inline-block underline" href="https://mausam.imd.gov.in/" target="_blank" rel="noreferrer">Check the official IMD weather service</a>
+        </div>
+      ) : (
+      <>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
@@ -218,6 +227,8 @@ export const WeatherIntelligencePage: React.FC = () => {
           ))}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };
