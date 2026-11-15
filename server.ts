@@ -250,19 +250,20 @@ async function startServer() {
   app.get('/api/agriculture/weather', async (_req, res) => {
     const stationId = process.env.IMD_STATION_ID?.trim();
     const apiToken = process.env.IMD_API_TOKEN?.trim();
+    const imdEndpoint = process.env.IMD_CURRENT_WEATHER_URL?.trim();
     const authHeader = process.env.IMD_AUTH_HEADER?.trim() || 'Authorization';
     const authPrefix = process.env.IMD_AUTH_PREFIX ?? 'Bearer ';
-    if (!stationId || !apiToken) {
+    if (!stationId || !apiToken || !imdEndpoint) {
       return res.status(503).json({
         available: false,
         status: 'CONFIGURATION_REQUIRED',
-        message: 'Configure IMD_STATION_ID and IMD_API_TOKEN as server-side secrets after registering with IMD.',
+        message: 'Configure IMD_CURRENT_WEATHER_URL, IMD_STATION_ID and IMD_API_TOKEN as server-side secrets after confirming the endpoint and response schema with IMD.',
         source: 'India Meteorological Department',
         sourceUrl: 'https://api.imd.gov.in/public/api_reference.html'
       });
     }
     try {
-      const url = new URL('https://api.imd.gov.in/api/v1/current_wx');
+      const url = new URL(imdEndpoint);
       url.searchParams.set('id', stationId);
       const response = await fetchWithTimeout(url.toString(), {
         [authHeader]: authPrefix + apiToken,
@@ -287,7 +288,7 @@ async function startServer() {
       return res.json({
         available: true,
         source: 'India Meteorological Department',
-        sourceUrl: 'https://api.imd.gov.in/api/v1/current_wx',
+        sourceUrl: imdEndpoint,
         stationId,
         stationLocation: row.Station || row.STATION || 'IMD station (name unavailable)',
         observationDate: row['Date of Observation'] || row.DATE || null,
@@ -405,8 +406,8 @@ async function startServer() {
           id: 'SRC-IMD',
           name: 'India Meteorological Department (IMD) Live Weather API',
           category: 'CLIMATE_WEATHER',
-          status: 'VERIFICATION_REQUIRED',
-          statusLabel: 'Verification required — Live IMD station API not connected',
+          status: process.env.IMD_CURRENT_WEATHER_URL && process.env.IMD_STATION_ID && process.env.IMD_API_TOKEN ? 'CONFIGURED_PENDING_VALIDATION' : 'VERIFICATION_REQUIRED',
+          statusLabel: process.env.IMD_CURRENT_WEATHER_URL && process.env.IMD_STATION_ID && process.env.IMD_API_TOKEN ? 'Credentials configured — response validation pending' : 'Verification required — IMD endpoint and credentials not configured',
           details:
             'Historical Krishna District monsoon averages are available for planning; live real-time IMD AWS telemetry requires an official institutional API feed.'
         },
@@ -423,8 +424,8 @@ async function startServer() {
           id: 'SRC-AGMARKNET',
           name: 'AGMARKNET / eNAM Daily Mandi Arrivals & Modal Prices',
           category: 'MARKET_PRICES',
-          status: 'VERIFICATION_REQUIRED',
-          statusLabel: 'Verification required — Live AGMARKNET API not connected',
+          status: process.env.DATA_GOV_IN_API_KEY ? 'CONFIGURED_PENDING_VALIDATION' : 'VERIFICATION_REQUIRED',
+          statusLabel: process.env.DATA_GOV_IN_API_KEY ? 'API key configured — response validation pending' : 'Verification required — data.gov.in API key not configured',
           details:
             'Displays dated APMC/AMIC historical price bands and Conservative/Expected/Favourable scenarios rather than claiming live today spot rates.'
         },
