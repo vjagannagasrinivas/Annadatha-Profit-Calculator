@@ -40,6 +40,18 @@ interface ToastMessage {
   message: string;
 }
 
+interface WeatherObservation {
+  available: boolean; status: string; source: string; sourceUrl: string; stationId?: string;
+  stationLocation?: string; observationDate?: string | null; observationTimeUtc?: string | null;
+  currentTemp?: number; humidity?: number | null; windSpeed?: number | null; rainfallPast24h?: number | null;
+  minTemp?: number | null; maxTemp?: number | null; fetchedAt?: string;
+}
+interface OfficialMandiRecord {
+  id: string; commodity: string; variety: string; marketName: string; district: string; state: string;
+  minPrice: number; maxPrice: number; modalPrice: number; reportDate: string; priceUnit: string;
+  sourceName: string; sourceUrl: string; sourceTag: string; retrievedAt: string;
+}
+
 interface AppContextType {
   role: UserRole;
   setRole: (role: UserRole) => void;
@@ -71,6 +83,9 @@ interface AppContextType {
   addSoilCard: (card: SoilHealthCard) => void;
   
   weather: WeatherCondition | null;
+  weatherObservation: WeatherObservation | null;
+  officialMandiRecords: OfficialMandiRecord[];
+  liveDataStatus: { weather: string; mandi: string };
   
   crops: CropProfile[];
   
@@ -152,6 +167,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   
   const [weather] = useState<WeatherCondition | null>(null);
+  const [weatherObservation, setWeatherObservation] = useState<WeatherObservation | null>(null);
+  const [officialMandiRecords, setOfficialMandiRecords] = useState<OfficialMandiRecord[]>([]);
+  const [liveDataStatus, setLiveDataStatus] = useState({ weather: 'LOADING', mandi: 'LOADING' });
   const [crops] = useState<CropProfile[]>(INITIAL_CROPS);
   const [resourcePlan, setResourcePlan] = useState<ResourceItem[]>([]);
   const [mandiPrices] = useState<MandiPriceRecord[]>([]);
@@ -185,6 +203,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const [villageStats] = useState<VillageClusterStat[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Fetch official datasets through server-side adapters. API secrets never enter the browser.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const [weatherResult, mandiResult] = await Promise.allSettled([
+        fetch('/api/agriculture/weather').then(async (r) => { const data = await r.json(); if (!r.ok) throw data; return data; }),
+        fetch('/api/agriculture/mandi-prices?district=Krishna').then(async (r) => { const data = await r.json(); if (!r.ok) throw data; return data; })
+      ]);
+      if (cancelled) return;
+      if (weatherResult.status === 'fulfilled' && weatherResult.value?.available) {
+        setWeatherObservation(weatherResult.value);
+        setLiveDataStatus((s) => ({ ...s, weather: weatherResult.value.status || 'LIVE_DATA' }));
+      } else {
+        setWeatherObservation(null);
+        setLiveDataStatus((s) => ({ ...s, weather: weatherResult.status === 'rejected' ? (weatherResult.reason?.status || 'UNAVAILABLE') : (weatherResult.value?.status || 'UNAVAILABLE') }));
+      }
+      if (mandiResult.status === 'fulfilled' && mandiResult.value?.available && Array.isArray(mandiResult.value.records)) {
+        setOfficialMandiRecords(mandiResult.value.records);
+        setLiveDataStatus((s) => ({ ...s, mandi: mandiResult.value.status || 'LIVE_DATA' }));
+      } else {
+        setOfficialMandiRecords([]);
+        setLiveDataStatus((s) => ({ ...s, mandi: mandiResult.status === 'rejected' ? (mandiResult.reason?.status || 'UNAVAILABLE') : (mandiResult.value?.status || 'UNAVAILABLE') }));
+      }
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, []);
 
   // Persist state changes in localStorage for seamless evaluation
   useEffect(() => {
@@ -417,6 +463,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         soilCards,
         addSoilCard,
         weather,
+        weatherObservation,
+        officialMandiRecords,
+        liveDataStatus,
         crops,
         resourcePlan,
         setResourcePlan,
