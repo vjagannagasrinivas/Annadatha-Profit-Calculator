@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
@@ -149,6 +150,7 @@ function getGeminiClient(): GoogleGenAI | null {
 
 async function startServer() {
   const app = express();
+  const httpServer = http.createServer(app);
   app.use(express.json({ limit: '2mb' }));
 
   // =========================================================================
@@ -436,7 +438,7 @@ Produce a clear, farmer-friendly first, bilingual (English + Telugu) decision-su
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, ws: { server: httpServer } },
       appType: 'spa'
     });
     app.use(vite.middlewares);
@@ -448,7 +450,7 @@ Produce a clear, farmer-friendly first, bilingual (English + Telugu) decision-su
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Annadatha server running at http://0.0.0.0:${PORT}`);
   });
 }
