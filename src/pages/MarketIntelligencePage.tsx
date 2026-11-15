@@ -27,6 +27,19 @@ export const MarketIntelligencePage: React.FC = () => {
     return matchMarket && matchSearch;
   });
 
+  if (mandiPrices.length === 0) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold text-slate-900">Market Intelligence</h1>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950">
+          <h2 className="font-semibold">Verified mandi prices unavailable</h2>
+          <p className="mt-1">No live or dated AGMARKNET/e-NAM price feed is connected. Annadatha will not display sample prices, historical charts, MSP comparisons, or profit estimates as market facts.</p>
+          <a className="mt-2 inline-block underline" href="https://agmarknet.gov.in/" target="_blank" rel="noreferrer">Open official AGMARKNET</a>
+        </div>
+      </div>
+    );
+  }
+
   // Sample 6-Month Historical Seasonal Price Points for Paddy BPT 5204
   const historicalTrendData = [
     { month: 'Jun 2025', price: 2360, label: 'Nursery Window' },
