@@ -16,6 +16,19 @@ This branch intentionally starts with an empty farmer workspace. Legacy seeded d
 - Treats geocoding as address resolution only; it does not prove that a location is an agricultural parcel.
 - Avoids describing unverified institutional references as locally validated evidence.
 
+## Official data adapter implementation
+
+This branch includes server-side adapter endpoints and browser presentation for two official data feeds:
+
+- `GET /api/agriculture/weather`: configurable IMD current-station observation adapter. Configure `IMD_CURRENT_WEATHER_URL`, `IMD_STATION_ID`, and `IMD_API_TOKEN` using the exact endpoint, header and response schema issued for your IMD subscription. It intentionally does not generate forecasts or spraying advice.
+- `GET /api/agriculture/mandi-prices?district=Krishna`: AGMARKNET daily-price adapter through the data.gov.in resource API. Configure `DATA_GOV_IN_API_KEY`; optionally override `AGMARKNET_RESOURCE_ID`.
+- `.env.example` documents variable names only; it contains no credentials. Keep real values in server/deployment secrets, never in frontend variables or Git.
+- The Weather and Market pages now display returned source, station/market, observation/report date, units, and unavailable states. They do not fabricate missing values.
+
+Provider access and response schemas have not been validated against live credentials in this repository yet. A configured status means credentials are present, not that the upstream feed has passed validation. Crop ranking and profit estimates remain disabled until all required parcel, soil, agronomic evidence, verified price and cost inputs can be validated together.
+
+A GitHub Actions workflow was added to run TypeScript validation and a Vite production build on pushes and pull requests. Check its result before merging.
+
 ## Important limitations
 
 This is **not yet a production-ready live agricultural advisory service**. The following are not integrated in this branch:
