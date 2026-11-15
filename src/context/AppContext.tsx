@@ -70,7 +70,7 @@ interface AppContextType {
   soilCards: SoilHealthCard[];
   addSoilCard: (card: SoilHealthCard) => void;
   
-  weather: WeatherCondition;
+  weather: WeatherCondition | null;
   
   crops: CropProfile[];
   
@@ -114,6 +114,19 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // One-time migration: discard legacy seeded demo records from this browser.
+  useState(() => {
+    const key = 'annadatha_data_mode';
+    if (localStorage.getItem(key) !== 'real-data-only-v1') {
+      [
+        'annadatha_farmers', 'annadatha_parcels', 'annadatha_soil_cards',
+        'annadatha_profit_plans', 'annadatha_reviews', 'annadatha_scheme_applications',
+        'annadatha_bookmarked_schemes', 'annadatha_research_evidence'
+      ].forEach((item) => localStorage.removeItem(item));
+      localStorage.setItem(key, 'real-data-only-v1');
+    }
+    return true;
+  });
   const [role, setRole] = useState<UserRole>('INSTITUTION_ADMIN');
   const [language, setLanguage] = useState<Language>('en');
   
