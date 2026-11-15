@@ -121,56 +121,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pilotDistrict, setPilotDistrict] = useState('Krishna');
   const [pilotState] = useState('Andhra Pradesh');
   
-  const [activeFarmerId, setActiveFarmerId] = useState<string>('AP-KRI-GUD-0182');
+  const [activeFarmerId, setActiveFarmerId] = useState<string>('');
   
   const [farmers, setFarmers] = useState<FarmerProfile[]>(() => {
     const saved = localStorage.getItem('annadatha_farmers');
-    return saved ? JSON.parse(saved) : INITIAL_FARMERS;
+    return saved ? JSON.parse(saved) : [];
   });
   
   const [parcels, setParcels] = useState<FarmParcel[]>(() => {
     const saved = localStorage.getItem('annadatha_parcels');
-    return saved ? JSON.parse(saved) : INITIAL_PARCELS;
+    return saved ? JSON.parse(saved) : [];
   });
   
   const [soilCards, setSoilCards] = useState<SoilHealthCard[]>(() => {
     const saved = localStorage.getItem('annadatha_soil_cards');
-    return saved ? JSON.parse(saved) : INITIAL_SOIL_CARDS;
+    return saved ? JSON.parse(saved) : [];
   });
   
-  const [weather] = useState<WeatherCondition>(INITIAL_WEATHER);
+  const [weather] = useState<WeatherCondition | null>(null);
   const [crops] = useState<CropProfile[]>(INITIAL_CROPS);
-  const [resourcePlan, setResourcePlan] = useState<ResourceItem[]>(INITIAL_RESOURCE_PLAN_PADDY);
-  const [mandiPrices] = useState<MandiPriceRecord[]>(INITIAL_MANDI_PRICES);
+  const [resourcePlan, setResourcePlan] = useState<ResourceItem[]>([]);
+  const [mandiPrices] = useState<MandiPriceRecord[]>([]);
   
   const [profitPlans, setProfitPlans] = useState<ProfitOptimizationPlan[]>(() => {
     const saved = localStorage.getItem('annadatha_profit_plans');
-    return saved ? JSON.parse(saved) : INITIAL_PROFIT_PLANS;
+    return saved ? JSON.parse(saved) : [];
   });
   
   const [reviewQueue, setReviewQueue] = useState<ExpertReviewItem[]>(() => {
     const saved = localStorage.getItem('annadatha_reviews');
-    return saved ? JSON.parse(saved) : INITIAL_REVIEW_QUEUE;
+    return saved ? JSON.parse(saved) : [];
   });
 
-  const [schemes] = useState<GovernmentScheme[]>(OFFICIAL_SCHEMES);
+  const [schemes] = useState<GovernmentScheme[]>([]);
 
   const [schemeApplications, setSchemeApplications] = useState<FarmerSchemeApplication[]>(() => {
     const saved = localStorage.getItem('annadatha_scheme_applications');
-    return saved ? JSON.parse(saved) : INITIAL_SCHEME_APPLICATIONS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [bookmarkedSchemeIds, setBookmarkedSchemeIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('annadatha_bookmarked_schemes');
-    return saved ? JSON.parse(saved) : ['SCHEME-PM-KISAN', 'SCHEME-AP-RYTHU-BHAROSA', 'SCHEME-FREE-CROP-INSURANCE'];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [researchEvidence, setResearchEvidence] = useState<ResearchEvidenceRecord[]>(() => {
     const saved = localStorage.getItem('annadatha_research_evidence');
-    return saved ? JSON.parse(saved) : INITIAL_RESEARCH_EVIDENCE;
+    return saved ? JSON.parse(saved) : [];
   });
   
-  const [villageStats] = useState<VillageClusterStat[]>(INITIAL_VILLAGE_STATS);
+  const [villageStats] = useState<VillageClusterStat[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   // Persist state changes in localStorage for seamless evaluation
