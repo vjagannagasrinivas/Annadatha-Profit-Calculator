@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export const MarketIntelligencePage: React.FC = () => {
-  const { language, mandiPrices } = useApp();
+  const { language, mandiPrices, officialMandiRecords, liveDataStatus } = useApp();
   const [selectedMarket, setSelectedMarket] = useState('ALL');
   const [searchCommodity, setSearchCommodity] = useState('');
 
@@ -31,10 +31,12 @@ export const MarketIntelligencePage: React.FC = () => {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-bold text-slate-900">Market Intelligence</h1>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950">
-          <h2 className="font-semibold">Verified mandi prices unavailable</h2>
-          <p className="mt-1">No live or dated AGMARKNET/e-NAM price feed is connected. Annadatha will not display sample prices, historical charts, MSP comparisons, or profit estimates as market facts.</p>
-          <a className="mt-2 inline-block underline" href="https://agmarknet.gov.in/" target="_blank" rel="noreferrer">Open official AGMARKNET</a>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-800 space-y-3">
+          <div><h2 className="font-semibold">Official AGMARKNET daily market records</h2><p className="text-xs text-slate-500 mt-1">Status: {liveDataStatus.mandi}. Source: data.gov.in AGMARKNET resource. Prices are shown only with the reported market and date.</p></div>
+          {officialMandiRecords.length ? (
+            <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="border-b"><th className="p-2">Commodity / variety</th><th className="p-2">Market</th><th className="p-2">Date</th><th className="p-2">Min ₹/qtl</th><th className="p-2">Max ₹/qtl</th><th className="p-2">Modal ₹/qtl</th></tr></thead><tbody>{officialMandiRecords.map((record) => <tr key={record.id} className="border-b"><td className="p-2">{record.commodity} / {record.variety}</td><td className="p-2">{record.marketName}, {record.district}</td><td className="p-2">{record.reportDate}</td><td className="p-2">{record.minPrice.toLocaleString('en-IN')}</td><td className="p-2">{record.maxPrice.toLocaleString('en-IN')}</td><td className="p-2 font-semibold">{record.modalPrice.toLocaleString('en-IN')}</td></tr>)}</tbody></table></div>
+          ) : <p className="text-amber-800">No verified market records available. Configure DATA_GOV_IN_API_KEY on the server or check the official portal. Do not use this as a selling-price guarantee.</p>}
+          <a className="inline-block underline" href="https://agmarknet.gov.in/" target="_blank" rel="noreferrer">Open official AGMARKNET</a>
         </div>
       </div>
     );
