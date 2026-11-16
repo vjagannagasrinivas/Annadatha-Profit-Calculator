@@ -83,15 +83,15 @@ export const CropIntelligencePage: React.FC = () => {
     state: pilotState || 'Andhra Pradesh',
     district: pilotDistrict || 'Krishna',
     mandal: pilotMandal || 'Gudlavalleru',
-    village: activeFarmer?.village || primaryParcel?.village || 'Dokiparru',
-    locality: primaryParcel ? `Survey #${primaryParcel.surveyNumber}` : 'Eastern Delta Canal Command',
-    latitude: primaryParcel?.latitude || 16.3365,
-    longitude: primaryParcel?.longitude || 81.0312,
-    consentToSaveCoordinates: true,
-    classification: 'RURAL',
-    landUseCategory: 'Krishna Eastern Delta Canal Command (Rural Cropland)',
-    agriculturalLandConfirmed: true,
-    requiresFarmConfirmation: false
+    village: activeFarmer?.village || primaryParcel?.village || '',
+    locality: primaryParcel ? `Survey #${primaryParcel.surveyNumber}` : '',
+    latitude: primaryParcel?.latitude,
+    longitude: primaryParcel?.longitude,
+    consentToSaveCoordinates: false,
+    classification: 'PERI_URBAN',
+    landUseCategory: 'UNVERIFIED',
+    agriculturalLandConfirmed: false,
+    requiresFarmConfirmation: true
   });
 
   // Module 2 & 4: 12-Step Farm Assessment & Multi-Objective Priority Weights
