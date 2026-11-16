@@ -23,7 +23,6 @@ import {
   VerifiedSchemeLink,
   CropCombinationPlan
 } from '../types';
-import { INITIAL_RESEARCH_EVIDENCE } from '../data/researchEvidenceData';
 import { OFFICIAL_SCHEMES } from '../data/schemesData';
 
 export interface EvaluatedCrop {
@@ -270,7 +269,7 @@ export function getVerifiedSchemesForCrop(
 export function evaluateCropForFarm(
   crop: CropProfile,
   farm: FarmEvaluationProfile,
-  researchLibrary: ResearchEvidenceRecord[] = INITIAL_RESEARCH_EVIDENCE
+  researchLibrary: ResearchEvidenceRecord[] = []
 ): CropEvaluationResult {
   const reasonsFor: string[] = [];
   const reasonsForTelugu: string[] = [];
