@@ -533,7 +533,7 @@ export function rankCropsForFarm(
   catalogue: CropProfile[],
   farm: FarmEvaluationProfile,
   rankingType: RecommendationRankingType,
-  researchLibrary: ResearchEvidenceRecord[] = INITIAL_RESEARCH_EVIDENCE
+  researchLibrary: ResearchEvidenceRecord[] = []
 ): EvaluatedCrop[] {
   const weights = farm.priorityWeights || DEFAULT_PRIORITY_WEIGHTS;
 
@@ -750,7 +750,7 @@ export function rankCropsForFarm(
 export function evaluateCropCombinations(
   catalogue: CropProfile[],
   farm: FarmEvaluationProfile,
-  researchLibrary: ResearchEvidenceRecord[] = INITIAL_RESEARCH_EVIDENCE
+  researchLibrary: ResearchEvidenceRecord[] = []
 ): CropCombinationPlan[] {
   const byId = new Map<string, EvaluatedCrop>();
   const all = rankCropsForFarm(catalogue, { ...farm, season: 'ALL' }, 'BEST_OVERALL_BALANCE', researchLibrary);
