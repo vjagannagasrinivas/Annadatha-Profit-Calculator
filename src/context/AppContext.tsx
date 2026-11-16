@@ -170,7 +170,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [weatherObservation, setWeatherObservation] = useState<WeatherObservation | null>(null);
   const [officialMandiRecords, setOfficialMandiRecords] = useState<OfficialMandiRecord[]>([]);
   const [liveDataStatus, setLiveDataStatus] = useState({ weather: 'LOADING', mandi: 'LOADING' });
-  const [crops] = useState<CropProfile[]>(INITIAL_CROPS);
+  const [crops] = useState<CropProfile[]>([]);
   const [resourcePlan, setResourcePlan] = useState<ResourceItem[]>([]);
   const [mandiPrices] = useState<MandiPriceRecord[]>([]);
   
