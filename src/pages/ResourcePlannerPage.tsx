@@ -22,16 +22,14 @@ export const ResourcePlannerPage: React.FC = () => {
   const { language, resourcePlan, updateResourceItem, saveProfitPlan, farmers, activeFarmer } = useApp();
   const navigate = useNavigate();
 
-  const [acreage, setAcreage] = useState<number>(3.0);
-  const [selectedCrop, setSelectedCrop] = useState('Paddy (BPT 5204)');
+  const [acreage, setAcreage] = useState<number>(0);
+  const [selectedCrop, setSelectedCrop] = useState('');
   const [cultivationMethod, setCultivationMethod] = useState<'CONVENTIONAL_PUDDLED' | 'DIRECT_SEEDED_RICE_DSR'>('CONVENTIONAL_PUDDLED');
 
   // Calculate totals
   const totalCostPerAcre = resourcePlan.reduce((acc, curr) => acc + curr.totalCostPerAcre, 0);
   // DSR cultivation saves roughly 14 women mandays transplanting (~₹6,300) and reduces puddling tractor by 2 hours (~₹2,400), but adds weedicide (~₹1,200) -> Net ~₹7,500/acre savings!
-  const methodAdjustedCostPerAcre = cultivationMethod === 'DIRECT_SEEDED_RICE_DSR'
-    ? Math.round(totalCostPerAcre * 0.76)
-    : totalCostPerAcre;
+  const methodAdjustedCostPerAcre = totalCostPerAcre;
 
   const totalFarmParcelCost = Math.round(methodAdjustedCostPerAcre * acreage);
 
@@ -57,48 +55,8 @@ export const ResourcePlannerPage: React.FC = () => {
   };
 
   const handleProceedToProfitAnalysis = () => {
-    // Generate draft plan for Profit Analysis
-    const expectedYieldPerAcre = 28; // quintals
-    const expectedPricePerQtl = 2590; // INR
-    const totalYield = expectedYieldPerAcre * acreage;
-    const mainRevenue = totalYield * expectedPricePerQtl;
-    const byProductRevenue = acreage * 4500;
-    const grossRevenue = mainRevenue + byProductRevenue;
-    const netProfit = grossRevenue - totalFarmParcelCost;
-
-    saveProfitPlan({
-      id: `PLN-2026-${Math.floor(100 + Math.random() * 900)}`,
-      farmerId: activeFarmer?.id || 'AP-KRI-GUD-0182',
-      parcelId: 'PRC-GUD-0182-A',
-      cropId: 'CRP-PAD-BPT5204',
-      cropName: selectedCrop,
-      variety: 'BPT 5204',
-      acreage,
-      cultivationMethod,
-      seedCost: Math.round(resourcePlan.filter(r => r.category === 'SEED').reduce((a, b) => a + b.totalCostPerAcre, 0) * acreage),
-      fertilizerCost: Math.round(resourcePlan.filter(r => r.category === 'FERTILIZER').reduce((a, b) => a + b.totalCostPerAcre, 0) * acreage),
-      organicCost: Math.round(resourcePlan.filter(r => r.category === 'ORGANIC').reduce((a, b) => a + b.totalCostPerAcre, 0) * acreage),
-      pesticideCost: Math.round(resourcePlan.filter(r => r.category === 'PESTICIDE').reduce((a, b) => a + b.totalCostPerAcre, 0) * acreage),
-      labourCost: Math.round(resourcePlan.filter(r => r.category === 'LABOUR').reduce((a, b) => a + b.totalCostPerAcre, 0) * acreage * (cultivationMethod === 'DIRECT_SEEDED_RICE_DSR' ? 0.5 : 1)),
-      machineryCost: Math.round(resourcePlan.filter(r => r.category === 'MACHINERY').reduce((a, b) => a + b.totalCostPerAcre, 0) * acreage),
-      irrigationPowerCost: Math.round(resourcePlan.filter(r => r.category === 'IRRIGATION').reduce((a, b) => a + b.totalCostPerAcre, 0) * acreage),
-      totalOperationalCost: totalFarmParcelCost,
-      costPerAcre: methodAdjustedCostPerAcre,
-      expectedYieldPerAcreQuintals: expectedYieldPerAcre,
-      totalYieldQuintals: totalYield,
-      expectedPricePerQuintal: expectedPricePerQtl,
-      mainProduceRevenue: mainRevenue,
-      byProductRevenue,
-      grossEstimatedRevenue: grossRevenue,
-      netProfit,
-      netProfitPerAcre: Math.round(netProfit / acreage),
-      returnOnInvestmentPct: Number(((netProfit / totalFarmParcelCost) * 100).toFixed(1)),
-      breakEvenPricePerQuintal: Math.round(totalFarmParcelCost / totalYield),
-      status: 'CALCULATED_ESTIMATE',
-      sourceTag: 'CALCULATED_ESTIMATE'
-    });
-
-    navigate('/profit');
+    // Profit calculations stay disabled until verified crop, yield, price, and cost inputs exist.
+    return;
   };
 
   return (
@@ -118,6 +76,8 @@ export const ResourcePlannerPage: React.FC = () => {
 
         <button
           onClick={handleProceedToProfitAnalysis}
+          disabled
+          title="Unavailable until verified cost, yield and market inputs are connected"
           className="flex items-center gap-2 px-4 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-colors text-xs font-semibold shadow-xs cursor-pointer"
         >
           <span>{language === 'te' ? 'లాభాల విశ్లేషణకు పంపండి' : 'Calculate Net Profit & Revenue'}</span>
@@ -126,6 +86,11 @@ export const ResourcePlannerPage: React.FC = () => {
       </div>
 
       <DataDisclaimerBanner sourceNote="AP Department of Agriculture Input Subsidies & Prevailing Gudlavalleru Wages" compact />
+
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+        <strong>Profit calculation is not available yet.</strong>
+        <p className="mt-1">No verified crop-specific input quotations, yield evidence, or dated buyer/mandi prices are connected. This planner will not invent a cost, yield, selling price, or profit figure. Enter verified quotations and evidence before enabling calculations.</p>
+      </div>
 
       {/* Control Strip: Acreage and Cultivation Method */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs grid grid-cols-1 md:grid-cols-3 gap-4 items-center">

@@ -17,10 +17,30 @@ import {
 } from 'lucide-react';
 
 export const WeatherIntelligencePage: React.FC = () => {
-  const { language, weather, pilotMandal, pilotDistrict } = useApp();
+  const { language, weather, weatherObservation, liveDataStatus, pilotMandal, pilotDistrict } = useApp();
 
   return (
     <div className="space-y-6">
+      {/* Live weather is deliberately unavailable until a verified feed is connected. */}
+      {!weather ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-800 space-y-3">
+          <div>
+            <h2 className="font-semibold">IMD station observation</h2>
+            <p className="text-xs text-slate-500 mt-1">Status: {liveDataStatus.weather}. Station observations are not parcel-level forecasts.</p>
+          </div>
+          {weatherObservation ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div><div className="text-xs text-slate-500">Temperature</div><strong>{weatherObservation.currentTemp} °C</strong></div>
+              <div><div className="text-xs text-slate-500">Humidity</div><strong>{weatherObservation.humidity ?? 'Not reported'}{weatherObservation.humidity === null || weatherObservation.humidity === undefined ? '' : ' %'}</strong></div>
+              <div><div className="text-xs text-slate-500">Wind speed</div><strong>{weatherObservation.windSpeed ?? 'Not reported'}{weatherObservation.windSpeed === null || weatherObservation.windSpeed === undefined ? '' : ' km/h'}</strong></div>
+              <div><div className="text-xs text-slate-500">Rainfall (last 24h)</div><strong>{weatherObservation.rainfallPast24h ?? 'Not reported'}{weatherObservation.rainfallPast24h === null || weatherObservation.rainfallPast24h === undefined ? '' : ' mm'}</strong></div>
+            </div>
+          ) : <p className="text-amber-800">Live IMD observation unavailable. Configure the IMD station and server-side token to enable it.</p>}
+          {weatherObservation && <p className="text-xs text-slate-500">Station: {weatherObservation.stationLocation} · Observed: {weatherObservation.observationDate || 'Date not supplied'} {weatherObservation.observationTimeUtc || ''} UTC · Retrieved: {weatherObservation.fetchedAt}</p>}
+          <a className="inline-block underline" href="https://mausam.imd.gov.in/" target="_blank" rel="noreferrer">Official IMD service</a>
+        </div>
+      ) : (
+      <>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
@@ -218,6 +238,8 @@ export const WeatherIntelligencePage: React.FC = () => {
           ))}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

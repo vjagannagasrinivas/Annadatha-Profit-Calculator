@@ -40,9 +40,9 @@ export const InstitutionDashboardPage: React.FC = () => {
   // Aggregated metrics
   const totalRegistered = villageStats.reduce((acc, curr) => acc + curr.registeredFarmers, 0);
   const totalAcreage = villageStats.reduce((acc, curr) => acc + curr.cultivatedAcreage, 0);
-  const avgSoilCoverage = Math.round(
-    villageStats.reduce((acc, curr) => acc + curr.soilTestingCoveragePct, 0) / villageStats.length
-  );
+  const avgSoilCoverage = villageStats.length
+    ? Math.round(villageStats.reduce((acc, curr) => acc + curr.soilTestingCoveragePct, 0) / villageStats.length)
+    : null;
   const pendingApprovals = reviewQueue.filter(r => r.currentStatus === 'EXPERT_REVIEW_PENDING').length;
 
   const filteredVillageStats = selectedVillage === 'ALL'
@@ -74,7 +74,7 @@ export const InstitutionDashboardPage: React.FC = () => {
         <div className="flex items-center gap-2 self-start md:self-auto">
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 shadow-2xs">
             <Calendar className="w-3.5 h-3.5 text-slate-500" />
-            <span>Kharif–Rabi 2025–26 Cycle</span>
+            <span>Reporting period: unavailable</span>
           </div>
 
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 shadow-2xs">
@@ -96,7 +96,7 @@ export const InstitutionDashboardPage: React.FC = () => {
 
       {/* Mandatory Data Disclaimer Banner */}
       <DataDisclaimerBanner
-        sourceNote="Pilot Benchmark Source: KVK Ghantasala & AP Department of Agriculture (Gudlavalleru Hub)"
+        sourceNote="No institutional dataset is connected. Metrics appear only after verified records are entered."
       />
 
       {/* Primary KPI Metric Cards (Clean, unboxed, tabular-nums) */}
@@ -111,7 +111,7 @@ export const InstitutionDashboardPage: React.FC = () => {
             <span className="text-2xl font-bold font-display text-slate-900 tabular-nums">
               {totalRegistered.toLocaleString()}
             </span>
-            <span className="text-xs text-emerald-700 font-medium">+14 this week</span>
+            <span className="text-xs text-slate-500 font-medium">No verified trend data</span>
           </div>
           <div className="mt-2 text-xs text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
             <span>Sample profiles in demo:</span>
@@ -133,7 +133,7 @@ export const InstitutionDashboardPage: React.FC = () => {
           </div>
           <div className="mt-2 text-xs text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
             <span>Primary Crop:</span>
-            <span className="font-semibold text-slate-800">Paddy (BPT 5204)</span>
+            <span className="font-semibold text-slate-500">Not available</span>
           </div>
         </div>
 

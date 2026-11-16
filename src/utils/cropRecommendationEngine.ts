@@ -23,7 +23,6 @@ import {
   VerifiedSchemeLink,
   CropCombinationPlan
 } from '../types';
-import { INITIAL_RESEARCH_EVIDENCE } from '../data/researchEvidenceData';
 import { OFFICIAL_SCHEMES } from '../data/schemesData';
 
 export interface EvaluatedCrop {
@@ -270,7 +269,7 @@ export function getVerifiedSchemesForCrop(
 export function evaluateCropForFarm(
   crop: CropProfile,
   farm: FarmEvaluationProfile,
-  researchLibrary: ResearchEvidenceRecord[] = INITIAL_RESEARCH_EVIDENCE
+  researchLibrary: ResearchEvidenceRecord[] = []
 ): CropEvaluationResult {
   const reasonsFor: string[] = [];
   const reasonsForTelugu: string[] = [];
@@ -534,7 +533,7 @@ export function rankCropsForFarm(
   catalogue: CropProfile[],
   farm: FarmEvaluationProfile,
   rankingType: RecommendationRankingType,
-  researchLibrary: ResearchEvidenceRecord[] = INITIAL_RESEARCH_EVIDENCE
+  researchLibrary: ResearchEvidenceRecord[] = []
 ): EvaluatedCrop[] {
   const weights = farm.priorityWeights || DEFAULT_PRIORITY_WEIGHTS;
 
@@ -751,7 +750,7 @@ export function rankCropsForFarm(
 export function evaluateCropCombinations(
   catalogue: CropProfile[],
   farm: FarmEvaluationProfile,
-  researchLibrary: ResearchEvidenceRecord[] = INITIAL_RESEARCH_EVIDENCE
+  researchLibrary: ResearchEvidenceRecord[] = []
 ): CropCombinationPlan[] {
   const byId = new Map<string, EvaluatedCrop>();
   const all = rankCropsForFarm(catalogue, { ...farm, season: 'ALL' }, 'BEST_OVERALL_BALANCE', researchLibrary);

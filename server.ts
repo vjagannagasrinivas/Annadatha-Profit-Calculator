@@ -234,6 +234,144 @@ async function startServer() {
   });
 
   // =========================================================================
+  // Official data adapters — credentials are server-side environment secrets.
+  // No browser bundle receives upstream API keys.
+  // =========================================================================
+  const fetchWithTimeout = async (url: string, headers: Record<string, string> = {}) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    try {
+      return await fetch(url, { headers, signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  app.get('/api/agriculture/weather', async (_req, res) => {
+    const stationId = process.env.IMD_STATION_ID?.trim();
+    const apiToken = process.env.IMD_API_TOKEN?.trim();
+    const imdEndpoint = process.env.IMD_CURRENT_WEATHER_URL?.trim();
+    const authHeader = process.env.IMD_AUTH_HEADER?.trim() || 'Authorization';
+    const authPrefix = process.env.IMD_AUTH_PREFIX ?? 'Bearer ';
+    if (!stationId || !apiToken || !imdEndpoint) {
+      return res.status(503).json({
+        available: false,
+        status: 'CONFIGURATION_REQUIRED',
+        message: 'Configure IMD_CURRENT_WEATHER_URL, IMD_STATION_ID and IMD_API_TOKEN as server-side secrets after confirming the endpoint and response schema with IMD.',
+        source: 'India Meteorological Department',
+        sourceUrl: 'https://api.imd.gov.in/public/api_reference.html'
+      });
+    }
+    try {
+      const url = new URL(imdEndpoint);
+      url.searchParams.set('id', stationId);
+      const response = await fetchWithTimeout(url.toString(), {
+        [authHeader]: authPrefix + apiToken,
+        Accept: 'application/json'
+      });
+      if (!response.ok) {
+        return res.status(502).json({ available: false, status: 'UPSTREAM_ERROR', upstreamStatus: response.status, source: 'IMD' });
+      }
+      const payload: any = await response.json();
+      const rows = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [payload];
+      const row = rows[0];
+      if (!row) return res.status(502).json({ available: false, status: 'NO_OBSERVATION', source: 'IMD' });
+      const number = (...keys: string[]) => {
+        for (const key of keys) {
+          const value = Number(row[key]);
+          if (row[key] !== undefined && row[key] !== null && row[key] !== '' && Number.isFinite(value)) return value;
+        }
+        return null;
+      };
+      const currentTemp = number('Temperature', 'temperature', 'CURR_TEMP');
+      if (currentTemp === null) return res.status(502).json({ available: false, status: 'UNRECOGNISED_RESPONSE', source: 'IMD' });
+      return res.json({
+        available: true,
+        source: 'India Meteorological Department',
+        sourceUrl: imdEndpoint,
+        stationId,
+        stationLocation: row.Station || row.STATION || 'IMD station (name unavailable)',
+        observationDate: row['Date of Observation'] || row.DATE || null,
+        observationTimeUtc: row['Time of Observation'] || row.TIME || null,
+        currentTemp,
+        humidity: number('Humidity', 'RH'),
+        windSpeed: number('Wind Speed', 'WIND_SPEED'),
+        rainfallPast24h: number('Last 24 hrs Rainfall', 'LAST_24_HRS_RAINFALL'),
+        minTemp: number('MIN_TEMP'),
+        maxTemp: number('MAX_TEMP'),
+        fetchedAt: new Date().toISOString(),
+        limitations: ['Station observation, not parcel-level weather', 'No forecast or agronomic advisory is inferred from this observation']
+      });
+    } catch {
+      return res.status(502).json({ available: false, status: 'FETCH_FAILED', source: 'IMD' });
+    }
+  });
+
+  app.get('/api/agriculture/mandi-prices', async (req, res) => {
+    const apiKey = process.env.DATA_GOV_IN_API_KEY?.trim();
+    const resourceId = process.env.AGMARKNET_RESOURCE_ID?.trim() || '9ef84268-d588-465a-a308-a864a43d0070';
+    if (!apiKey) {
+      return res.status(503).json({
+        available: false,
+        status: 'CONFIGURATION_REQUIRED',
+        message: 'Configure DATA_GOV_IN_API_KEY as a server-side secret from the Open Government Data portal.',
+        source: 'AGMARKNET / Open Government Data',
+        sourceUrl: 'https://data.gov.in/resource/current-daily-price-various-commodities-various-markets-mandi'
+      });
+    }
+    try {
+      const url = new URL(`https://api.data.gov.in/resource/${encodeURIComponent(resourceId)}`);
+      url.searchParams.set('api-key', apiKey);
+      url.searchParams.set('format', 'json');
+      url.searchParams.set('limit', '1000');
+      url.searchParams.set('filters[state]', 'Andhra Pradesh');
+      url.searchParams.set('filters[district]', String(req.query.district || 'Krishna'));
+      if (req.query.commodity) url.searchParams.set('filters[commodity]', String(req.query.commodity));
+      const response = await fetchWithTimeout(url.toString(), { Accept: 'application/json' });
+      if (!response.ok) return res.status(502).json({ available: false, status: 'UPSTREAM_ERROR', upstreamStatus: response.status, source: 'AGMARKNET' });
+      const payload: any = await response.json();
+      const records = Array.isArray(payload?.records) ? payload.records : [];
+      const pick = (row: any, ...keys: string[]) => {
+        for (const key of keys) if (row[key] !== undefined && row[key] !== null && row[key] !== '') return row[key];
+        return null;
+      };
+      const numeric = (value: any) => {
+        const n = Number(String(value ?? '').replace(/,/g, ''));
+        return Number.isFinite(n) ? n : null;
+      };
+      const normalised = records.map((row: any, index: number) => ({
+        id: `agmarknet-${index}-${String(pick(row, 'arrival_date', 'date') || '')}`,
+        commodity: pick(row, 'commodity', 'Commodity'),
+        variety: pick(row, 'variety', 'Variety') || 'Not specified',
+        marketName: pick(row, 'market', 'Market'),
+        district: pick(row, 'district', 'District'),
+        state: pick(row, 'state', 'State'),
+        minPrice: numeric(pick(row, 'min_price', 'Min Price')),
+        maxPrice: numeric(pick(row, 'max_price', 'Max Price')),
+        modalPrice: numeric(pick(row, 'modal_price', 'Modal Price')),
+        reportDate: pick(row, 'arrival_date', 'date', 'Arrival Date'),
+        priceUnit: 'INR per quintal',
+        sourceName: 'AGMARKNET via data.gov.in',
+        sourceUrl: 'https://data.gov.in/resource/current-daily-price-various-commodities-various-markets-mandi',
+        sourceTag: 'OFFICIAL_SOURCE',
+        retrievedAt: new Date().toISOString()
+      })).filter((row: any) => row.commodity && row.marketName && row.reportDate &&
+        row.minPrice !== null && row.maxPrice !== null && row.modalPrice !== null);
+      return res.json({
+        available: normalised.length > 0,
+        status: normalised.length > 0 ? 'LIVE_DATA' : 'NO_MATCHING_RECORDS',
+        source: 'AGMARKNET via Open Government Data Platform India',
+        sourceUrl: 'https://data.gov.in/resource/current-daily-price-various-commodities-various-markets-mandi',
+        district: String(req.query.district || 'Krishna'),
+        count: normalised.length,
+        records: normalised
+      });
+    } catch {
+      return res.status(502).json({ available: false, status: 'FETCH_FAILED', source: 'AGMARKNET' });
+    }
+  });
+
+  // =========================================================================
   // API: Module 9 - Transparent Data Sources Connectivity Status
   // =========================================================================
   app.get('/api/sources/status', (_req, res) => {
@@ -259,8 +397,8 @@ async function startServer() {
           id: 'SRC-GEO',
           name: 'OpenStreetMap Nominatim & Administrative Boundary Dataset',
           category: 'GEOGRAPHY_BOUNDARY',
-          status: 'LIVE_CONNECTED',
-          statusLabel: 'Live Connected (+ Verified AP/India Boundary Fallback)',
+          status: 'VERIFICATION_REQUIRED',
+          statusLabel: 'Geocoding only — parcel land use is not verified',
           details:
             'Resolves GPS/manual queries into Urban, Peri-Urban, or Rural boundaries so city centres (e.g., Vijayawada) are never treated as farmland.'
         },
@@ -268,8 +406,8 @@ async function startServer() {
           id: 'SRC-IMD',
           name: 'India Meteorological Department (IMD) Live Weather API',
           category: 'CLIMATE_WEATHER',
-          status: 'VERIFICATION_REQUIRED',
-          statusLabel: 'Verification required — Live IMD station API not connected',
+          status: process.env.IMD_CURRENT_WEATHER_URL && process.env.IMD_STATION_ID && process.env.IMD_API_TOKEN ? 'CONFIGURED_PENDING_VALIDATION' : 'VERIFICATION_REQUIRED',
+          statusLabel: process.env.IMD_CURRENT_WEATHER_URL && process.env.IMD_STATION_ID && process.env.IMD_API_TOKEN ? 'Credentials configured — response validation pending' : 'Verification required — IMD endpoint and credentials not configured',
           details:
             'Historical Krishna District monsoon averages are available for planning; live real-time IMD AWS telemetry requires an official institutional API feed.'
         },
@@ -286,8 +424,8 @@ async function startServer() {
           id: 'SRC-AGMARKNET',
           name: 'AGMARKNET / eNAM Daily Mandi Arrivals & Modal Prices',
           category: 'MARKET_PRICES',
-          status: 'VERIFICATION_REQUIRED',
-          statusLabel: 'Verification required — Live AGMARKNET API not connected',
+          status: process.env.DATA_GOV_IN_API_KEY ? 'CONFIGURED_PENDING_VALIDATION' : 'VERIFICATION_REQUIRED',
+          statusLabel: process.env.DATA_GOV_IN_API_KEY ? 'API key configured — response validation pending' : 'Verification required — data.gov.in API key not configured',
           details:
             'Displays dated APMC/AMIC historical price bands and Conservative/Expected/Favourable scenarios rather than claiming live today spot rates.'
         },
@@ -295,8 +433,8 @@ async function startServer() {
           id: 'SRC-ICAR',
           name: 'ICAR & ICAR-CRIDA District Crop Contingency Plans',
           category: 'AGRONOMY_REFERENCE',
-          status: 'CURATED_REFERENCE',
-          statusLabel: 'Curated Official Reference Loaded (Krishna District)',
+          status: 'VERIFICATION_REQUIRED',
+          statusLabel: 'Official reference documents and local applicability require verification',
           details:
             'Governs flood-submergence tolerance, drainage rejection rules, and delayed-monsoon crop contingency advisories.'
         },
@@ -304,8 +442,8 @@ async function startServer() {
           id: 'SRC-ANGRAU',
           name: 'ANGRAU & ICAR-KVK Ghantasala Crop Production Protocols',
           category: 'AGRONOMY_REFERENCE',
-          status: 'CURATED_REFERENCE',
-          statusLabel: 'Curated Official Reference Loaded',
+          status: 'VERIFICATION_REQUIRED',
+          statusLabel: 'Research records and source documents require verification',
           details:
             'Calibrates varietal selections, 13-item cultivation cost structures, seed rates, and seasonal sowing windows.'
         },

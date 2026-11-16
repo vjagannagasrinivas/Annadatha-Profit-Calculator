@@ -40,6 +40,18 @@ interface ToastMessage {
   message: string;
 }
 
+interface WeatherObservation {
+  available: boolean; status: string; source: string; sourceUrl: string; stationId?: string;
+  stationLocation?: string; observationDate?: string | null; observationTimeUtc?: string | null;
+  currentTemp?: number; humidity?: number | null; windSpeed?: number | null; rainfallPast24h?: number | null;
+  minTemp?: number | null; maxTemp?: number | null; fetchedAt?: string;
+}
+interface OfficialMandiRecord {
+  id: string; commodity: string; variety: string; marketName: string; district: string; state: string;
+  minPrice: number; maxPrice: number; modalPrice: number; reportDate: string; priceUnit: string;
+  sourceName: string; sourceUrl: string; sourceTag: string; retrievedAt: string;
+}
+
 interface AppContextType {
   role: UserRole;
   setRole: (role: UserRole) => void;
@@ -70,7 +82,10 @@ interface AppContextType {
   soilCards: SoilHealthCard[];
   addSoilCard: (card: SoilHealthCard) => void;
   
-  weather: WeatherCondition;
+  weather: WeatherCondition | null;
+  weatherObservation: WeatherObservation | null;
+  officialMandiRecords: OfficialMandiRecord[];
+  liveDataStatus: { weather: string; mandi: string };
   
   crops: CropProfile[];
   
@@ -114,6 +129,19 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // One-time migration: discard legacy seeded demo records from this browser.
+  useState(() => {
+    const key = 'annadatha_data_mode';
+    if (localStorage.getItem(key) !== 'real-data-only-v1') {
+      [
+        'annadatha_farmers', 'annadatha_parcels', 'annadatha_soil_cards',
+        'annadatha_profit_plans', 'annadatha_reviews', 'annadatha_scheme_applications',
+        'annadatha_bookmarked_schemes', 'annadatha_research_evidence'
+      ].forEach((item) => localStorage.removeItem(item));
+      localStorage.setItem(key, 'real-data-only-v1');
+    }
+    return true;
+  });
   const [role, setRole] = useState<UserRole>('INSTITUTION_ADMIN');
   const [language, setLanguage] = useState<Language>('en');
   
@@ -121,57 +149,88 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pilotDistrict, setPilotDistrict] = useState('Krishna');
   const [pilotState] = useState('Andhra Pradesh');
   
-  const [activeFarmerId, setActiveFarmerId] = useState<string>('AP-KRI-GUD-0182');
+  const [activeFarmerId, setActiveFarmerId] = useState<string>('');
   
   const [farmers, setFarmers] = useState<FarmerProfile[]>(() => {
     const saved = localStorage.getItem('annadatha_farmers');
-    return saved ? JSON.parse(saved) : INITIAL_FARMERS;
+    return saved ? JSON.parse(saved) : [];
   });
   
   const [parcels, setParcels] = useState<FarmParcel[]>(() => {
     const saved = localStorage.getItem('annadatha_parcels');
-    return saved ? JSON.parse(saved) : INITIAL_PARCELS;
+    return saved ? JSON.parse(saved) : [];
   });
   
   const [soilCards, setSoilCards] = useState<SoilHealthCard[]>(() => {
     const saved = localStorage.getItem('annadatha_soil_cards');
-    return saved ? JSON.parse(saved) : INITIAL_SOIL_CARDS;
+    return saved ? JSON.parse(saved) : [];
   });
   
-  const [weather] = useState<WeatherCondition>(INITIAL_WEATHER);
-  const [crops] = useState<CropProfile[]>(INITIAL_CROPS);
-  const [resourcePlan, setResourcePlan] = useState<ResourceItem[]>(INITIAL_RESOURCE_PLAN_PADDY);
-  const [mandiPrices] = useState<MandiPriceRecord[]>(INITIAL_MANDI_PRICES);
+  const [weather] = useState<WeatherCondition | null>(null);
+  const [weatherObservation, setWeatherObservation] = useState<WeatherObservation | null>(null);
+  const [officialMandiRecords, setOfficialMandiRecords] = useState<OfficialMandiRecord[]>([]);
+  const [liveDataStatus, setLiveDataStatus] = useState({ weather: 'LOADING', mandi: 'LOADING' });
+  const [crops] = useState<CropProfile[]>([]);
+  const [resourcePlan, setResourcePlan] = useState<ResourceItem[]>([]);
+  const [mandiPrices] = useState<MandiPriceRecord[]>([]);
   
   const [profitPlans, setProfitPlans] = useState<ProfitOptimizationPlan[]>(() => {
     const saved = localStorage.getItem('annadatha_profit_plans');
-    return saved ? JSON.parse(saved) : INITIAL_PROFIT_PLANS;
+    return saved ? JSON.parse(saved) : [];
   });
   
   const [reviewQueue, setReviewQueue] = useState<ExpertReviewItem[]>(() => {
     const saved = localStorage.getItem('annadatha_reviews');
-    return saved ? JSON.parse(saved) : INITIAL_REVIEW_QUEUE;
+    return saved ? JSON.parse(saved) : [];
   });
 
-  const [schemes] = useState<GovernmentScheme[]>(OFFICIAL_SCHEMES);
+  const [schemes] = useState<GovernmentScheme[]>([]);
 
   const [schemeApplications, setSchemeApplications] = useState<FarmerSchemeApplication[]>(() => {
     const saved = localStorage.getItem('annadatha_scheme_applications');
-    return saved ? JSON.parse(saved) : INITIAL_SCHEME_APPLICATIONS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [bookmarkedSchemeIds, setBookmarkedSchemeIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('annadatha_bookmarked_schemes');
-    return saved ? JSON.parse(saved) : ['SCHEME-PM-KISAN', 'SCHEME-AP-RYTHU-BHAROSA', 'SCHEME-FREE-CROP-INSURANCE'];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [researchEvidence, setResearchEvidence] = useState<ResearchEvidenceRecord[]>(() => {
     const saved = localStorage.getItem('annadatha_research_evidence');
-    return saved ? JSON.parse(saved) : INITIAL_RESEARCH_EVIDENCE;
+    return saved ? JSON.parse(saved) : [];
   });
   
-  const [villageStats] = useState<VillageClusterStat[]>(INITIAL_VILLAGE_STATS);
+  const [villageStats] = useState<VillageClusterStat[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Fetch official datasets through server-side adapters. API secrets never enter the browser.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const [weatherResult, mandiResult] = await Promise.allSettled([
+        fetch('/api/agriculture/weather').then(async (r) => { const data = await r.json(); if (!r.ok) throw data; return data; }),
+        fetch('/api/agriculture/mandi-prices?district=Krishna').then(async (r) => { const data = await r.json(); if (!r.ok) throw data; return data; })
+      ]);
+      if (cancelled) return;
+      if (weatherResult.status === 'fulfilled' && weatherResult.value?.available) {
+        setWeatherObservation(weatherResult.value);
+        setLiveDataStatus((s) => ({ ...s, weather: weatherResult.value.status || 'LIVE_DATA' }));
+      } else {
+        setWeatherObservation(null);
+        setLiveDataStatus((s) => ({ ...s, weather: weatherResult.status === 'rejected' ? (weatherResult.reason?.status || 'UNAVAILABLE') : (weatherResult.value?.status || 'UNAVAILABLE') }));
+      }
+      if (mandiResult.status === 'fulfilled' && mandiResult.value?.available && Array.isArray(mandiResult.value.records)) {
+        setOfficialMandiRecords(mandiResult.value.records);
+        setLiveDataStatus((s) => ({ ...s, mandi: mandiResult.value.status || 'LIVE_DATA' }));
+      } else {
+        setOfficialMandiRecords([]);
+        setLiveDataStatus((s) => ({ ...s, mandi: mandiResult.status === 'rejected' ? (mandiResult.reason?.status || 'UNAVAILABLE') : (mandiResult.value?.status || 'UNAVAILABLE') }));
+      }
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, []);
 
   // Persist state changes in localStorage for seamless evaluation
   useEffect(() => {
@@ -362,18 +421,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem('annadatha_bookmarked_schemes');
     localStorage.removeItem('annadatha_research_evidence');
     
-    setFarmers(INITIAL_FARMERS);
-    setParcels(INITIAL_PARCELS);
-    setSoilCards(INITIAL_SOIL_CARDS);
-    setProfitPlans(INITIAL_PROFIT_PLANS);
-    setReviewQueue(INITIAL_REVIEW_QUEUE);
-    setSchemeApplications(INITIAL_SCHEME_APPLICATIONS);
-    setBookmarkedSchemeIds(['SCHEME-PM-KISAN', 'SCHEME-AP-RYTHU-BHAROSA', 'SCHEME-FREE-CROP-INSURANCE']);
-    setResearchEvidence(INITIAL_RESEARCH_EVIDENCE);
-    setResourcePlan(INITIAL_RESOURCE_PLAN_PADDY);
-    setActiveFarmerId('AP-KRI-GUD-0182');
+    setFarmers([]);
+    setParcels([]);
+    setSoilCards([]);
+    setProfitPlans([]);
+    setReviewQueue([]);
+    setSchemeApplications([]);
+    setBookmarkedSchemeIds([]);
+    setResearchEvidence([]);
+    setResourcePlan([]);
+    setActiveFarmerId('');
     
-    addToast('warning', 'Demo Data Reset', 'All illustrative demo records restored to initial pilot state.');
+    addToast('info', 'Workspace Cleared', 'Local records cleared. No demo records were restored.');
   };
 
   const activeFarmer = farmers.find(f => f.id === activeFarmerId) || farmers[0];
@@ -404,6 +463,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         soilCards,
         addSoilCard,
         weather,
+        weatherObservation,
+        officialMandiRecords,
+        liveDataStatus,
         crops,
         resourcePlan,
         setResourcePlan,

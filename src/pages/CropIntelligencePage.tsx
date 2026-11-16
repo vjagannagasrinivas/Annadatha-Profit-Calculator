@@ -67,6 +67,8 @@ export const CropIntelligencePage: React.FC = () => {
     pilotDistrict,
     pilotState,
     researchEvidence,
+    weather,
+    mandiPrices,
     addReviewItem,
     addToast
   } = useApp();
@@ -81,15 +83,15 @@ export const CropIntelligencePage: React.FC = () => {
     state: pilotState || 'Andhra Pradesh',
     district: pilotDistrict || 'Krishna',
     mandal: pilotMandal || 'Gudlavalleru',
-    village: activeFarmer?.village || primaryParcel?.village || 'Dokiparru',
-    locality: primaryParcel ? `Survey #${primaryParcel.surveyNumber}` : 'Eastern Delta Canal Command',
-    latitude: primaryParcel?.latitude || 16.3365,
-    longitude: primaryParcel?.longitude || 81.0312,
-    consentToSaveCoordinates: true,
-    classification: 'RURAL',
-    landUseCategory: 'Krishna Eastern Delta Canal Command (Rural Cropland)',
-    agriculturalLandConfirmed: true,
-    requiresFarmConfirmation: false
+    village: activeFarmer?.village || primaryParcel?.village || '',
+    locality: primaryParcel ? `Survey #${primaryParcel.surveyNumber}` : '',
+    latitude: primaryParcel?.latitude,
+    longitude: primaryParcel?.longitude,
+    consentToSaveCoordinates: false,
+    classification: 'PERI_URBAN',
+    landUseCategory: 'UNVERIFIED',
+    agriculturalLandConfirmed: false,
+    requiresFarmConfirmation: true
   });
 
   // Module 2 & 4: 12-Step Farm Assessment & Multi-Objective Priority Weights
@@ -163,13 +165,8 @@ export const CropIntelligencePage: React.FC = () => {
   const [expandedCropId, setExpandedCropId] = useState<string | null>(null);
 
   // Modals
-  const [compareCropIds, setCompareCropIds] = useState<string[]>([
-    'CRP-PAD-BPT5204',
-    'CRP-PUL-LBG752',
-    'CRP-MIL-KORRA',
-    'CRP-SPI-CORIANDER',
-    'CRP-FRU-MORINGA'
-  ]);
+  // No preselected catalogue entries: comparisons must be explicitly chosen after evidence is available.
+  const [compareCropIds, setCompareCropIds] = useState<string[]>([]);
   const [showComparisonModal, setShowComparisonModal] = useState(false);
   const [detailModalCrop, setDetailModalCrop] = useState<EvaluatedCrop | null>(null);
   const [showFinalReportModal, setShowFinalReportModal] = useState(false);
@@ -194,13 +191,21 @@ export const CropIntelligencePage: React.FC = () => {
       });
   }, []);
 
+  // Recommendations require a real farm parcel, a linked lab soil report,
+  // weather data, and dated market prices. Missing inputs must never be guessed.
+  const hasVerifiedFarmInputs = Boolean(
+    primaryParcel && farmerSoilCards.length > 0 && weather && mandiPrices.length > 0
+  );
+
   const rankedEvaluatedCrops = useMemo(() => {
+    if (!hasVerifiedFarmInputs) return [];
     return rankCropsForFarm(crops, effectiveFarmProfile, rankingType, researchEvidence);
-  }, [crops, effectiveFarmProfile, rankingType, researchEvidence]);
+  }, [crops, effectiveFarmProfile, rankingType, researchEvidence, hasVerifiedFarmInputs]);
 
   const cropCombinations = useMemo(() => {
+    if (!hasVerifiedFarmInputs) return [];
     return evaluateCropCombinations(crops, effectiveFarmProfile, researchEvidence);
-  }, [crops, effectiveFarmProfile, researchEvidence]);
+  }, [crops, effectiveFarmProfile, researchEvidence, hasVerifiedFarmInputs]);
 
   const displayedCrops = useMemo(() => {
     return rankedEvaluatedCrops.filter((item) => {
@@ -218,14 +223,14 @@ export const CropIntelligencePage: React.FC = () => {
   }, [location, effectiveFarmProfile, rankedEvaluatedCrops, aiSynthesisSuccess]);
 
   const isLocationBlockedForCrops =
-    location.classification === 'URBAN' || !location.agriculturalLandConfirmed;
+    location.classification === 'URBAN' || !location.agriculturalLandConfirmed || !hasVerifiedFarmInputs;
 
   const handleRunAiAgent = async () => {
     if (isLocationBlockedForCrops) {
       addToast(
         'warning',
         'Confirm Agricultural Parcel',
-        'Urban city-centre or unconfirmed GPS cannot be evaluated as farmland. Select or confirm your rural parcel in Step 1.'
+        'Crop analysis is locked until the actual agricultural parcel, lab soil report, verified weather, and dated mandi prices are available. Missing values are not guessed.'
       );
       return;
     }
@@ -355,7 +360,7 @@ export const CropIntelligencePage: React.FC = () => {
     }
   };
 
-  const comparedCropsList = crops.filter((c) => compareCropIds.includes(c.id));
+  const comparedCropsList = hasVerifiedFarmInputs ? crops.filter((c) => compareCropIds.includes(c.id)) : [];
 
   const rankingTabs: {
     key: RecommendationRankingType;
@@ -514,7 +519,7 @@ export const CropIntelligencePage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setShowFinalReportModal(true)}
+            onClick={() => hasVerifiedFarmInputs && setShowFinalReportModal(true)}
             disabled={isLocationBlockedForCrops}
             className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50 text-emerald-900 border border-emerald-300 rounded-lg text-xs font-semibold cursor-pointer"
           >
@@ -1293,7 +1298,7 @@ export const CropIntelligencePage: React.FC = () => {
       )}
 
       {/* SIDE-BY-SIDE 5-CROP COMPARISON MODAL */}
-      {showComparisonModal && (
+      {showComparisonModal && hasVerifiedFarmInputs && (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto backdrop-blur-2xs">
           <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
             <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
@@ -1414,7 +1419,7 @@ export const CropIntelligencePage: React.FC = () => {
       )}
 
       {/* MODULE 5, 6, 7 MODAL */}
-      {detailModalCrop && (
+      {detailModalCrop && hasVerifiedFarmInputs && (
         <InvestmentProfitModal
           evaluatedCrop={detailModalCrop}
           acreage={farmProfile.acreage}
@@ -1424,7 +1429,7 @@ export const CropIntelligencePage: React.FC = () => {
       )}
 
       {/* MODULE 10 FINAL REPORT MODAL */}
-      {showFinalReportModal && (
+      {showFinalReportModal && hasVerifiedFarmInputs && (
         <FinalFarmerReportModal
           language={language}
           farmerName={activeFarmer?.fullName || 'Pilot Cultivator'}
