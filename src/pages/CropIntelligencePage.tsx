@@ -165,13 +165,8 @@ export const CropIntelligencePage: React.FC = () => {
   const [expandedCropId, setExpandedCropId] = useState<string | null>(null);
 
   // Modals
-  const [compareCropIds, setCompareCropIds] = useState<string[]>([
-    'CRP-PAD-BPT5204',
-    'CRP-PUL-LBG752',
-    'CRP-MIL-KORRA',
-    'CRP-SPI-CORIANDER',
-    'CRP-FRU-MORINGA'
-  ]);
+  // No preselected catalogue entries: comparisons must be explicitly chosen after evidence is available.
+  const [compareCropIds, setCompareCropIds] = useState<string[]>([]);
   const [showComparisonModal, setShowComparisonModal] = useState(false);
   const [detailModalCrop, setDetailModalCrop] = useState<EvaluatedCrop | null>(null);
   const [showFinalReportModal, setShowFinalReportModal] = useState(false);
@@ -365,7 +360,7 @@ export const CropIntelligencePage: React.FC = () => {
     }
   };
 
-  const comparedCropsList = crops.filter((c) => compareCropIds.includes(c.id));
+  const comparedCropsList = hasVerifiedFarmInputs ? crops.filter((c) => compareCropIds.includes(c.id)) : [];
 
   const rankingTabs: {
     key: RecommendationRankingType;
@@ -524,7 +519,7 @@ export const CropIntelligencePage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setShowFinalReportModal(true)}
+            onClick={() => hasVerifiedFarmInputs && setShowFinalReportModal(true)}
             disabled={isLocationBlockedForCrops}
             className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50 text-emerald-900 border border-emerald-300 rounded-lg text-xs font-semibold cursor-pointer"
           >
@@ -1303,7 +1298,7 @@ export const CropIntelligencePage: React.FC = () => {
       )}
 
       {/* SIDE-BY-SIDE 5-CROP COMPARISON MODAL */}
-      {showComparisonModal && (
+      {showComparisonModal && hasVerifiedFarmInputs && (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto backdrop-blur-2xs">
           <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
             <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
@@ -1424,7 +1419,7 @@ export const CropIntelligencePage: React.FC = () => {
       )}
 
       {/* MODULE 5, 6, 7 MODAL */}
-      {detailModalCrop && (
+      {detailModalCrop && hasVerifiedFarmInputs && (
         <InvestmentProfitModal
           evaluatedCrop={detailModalCrop}
           acreage={farmProfile.acreage}
@@ -1434,7 +1429,7 @@ export const CropIntelligencePage: React.FC = () => {
       )}
 
       {/* MODULE 10 FINAL REPORT MODAL */}
-      {showFinalReportModal && (
+      {showFinalReportModal && hasVerifiedFarmInputs && (
         <FinalFarmerReportModal
           language={language}
           farmerName={activeFarmer?.fullName || 'Pilot Cultivator'}
